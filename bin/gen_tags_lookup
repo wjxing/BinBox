@@ -1,0 +1,65 @@
+#!/bin/bash
+MY_CLEAN=false
+MY_FAIL=false
+MY_TAG_NAME=false
+MY_LANG=all
+
+check_args()
+{
+    if [ $# -lt 1 ]; then
+        MY_FAIL=true
+        return
+    fi
+    while [ -n "$1" ]
+    do
+        case "$1" in
+            framework) MY_TAG_NAME="cos-framework";;
+            sdk) MY_TAG_NAME="cos-sdk";;
+            common) MY_TAG_NAME="cos-common";;
+            cos-kernel) MY_TAG_NAME="cos-kernel";;
+            linux-kernel) MY_TAG_NAME="linux-kernel";;
+            pdk) MY_TAG_NAME="cos-pdk";;
+            androidrt) MY_TAG_NAME="cos-androidrt";;
+            temp) MY_TAG_NAME="temp";;
+            cpp) MY_LANG="cpp";;
+            java) MY_LANG="java";;
+            clean) MY_CLEAN="true";;
+        esac
+        shift
+    done
+
+}
+
+check_args $*
+
+if [[ $MY_CLEAN == "true" ]]; then
+    rm -f cscope* lookuptags
+    if [[ -f ~/.vim/tags/$MY_TAG_NAME.tag ]]; then
+        rm -f ~/.vim/tags/$MY_TAG_NAME.tag
+    fi
+    exit 0
+fi
+
+if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
+    if [ $MY_LANG = "all" ]; then
+        find ./ -type f -name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.java" | sed 's/^/\"/;s/$/\"/' > cscope.files
+    elif [ $MY_LANG = "cpp" ]; then
+        find ./ -type f -name "*.h" -o -name "*.c" -o -name "*.cpp" | sed 's/^/\"/;s/$/\"/' > cscope.files
+    else
+        find ./ -type f -name "*.java" | sed 's/^/\"/;s/$/\"/' > cscope.files
+    fi
+    cscope -Rbq
+    ctags -R -f ~/.vim/tags/$MY_TAG_NAME.tag --tag-relative=yes --exclude=*.js --exclude=*.png --exclude=*.gif
+    # generate tag file for lookupfile plugin
+    echo -e "!_TAG_FILE_SORTED\t2\t/2=foldcase/" > lookuptags
+    find . -not -regex '.*\.\(png\|gif\)' -type f -printf "%f\t%p\t1\n" | \
+        sort -f >> lookuptags
+fi
+
+if [ $MY_FAIL = "true" ]; then
+    echo "arg error"
+fi
+
+if [ $MY_TAG_NAME = "false" ]; then
+    echo "tag error"
+fi

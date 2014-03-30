@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+#mount smbfs
+mount.smbfs //ip/Code /mnt/winxp -o iocharset=utf8,user=$1,pass=$2,rw
