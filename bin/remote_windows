@@ -1,3 +1,0 @@
-#!/bin/sh
-#remote desktop, add jx-mail in /etc/hosts
-rdesktop -f -D -z -g 1920x1045 -a 24 -x lan -u name -p pass jx-mail 2>&1
