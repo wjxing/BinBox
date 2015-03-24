@@ -13,17 +13,11 @@ check_args()
     while [ -n "$1" ]
     do
         case "$1" in
-            framework) MY_TAG_NAME="cos-framework";;
-            sdk) MY_TAG_NAME="cos-sdk";;
-            common) MY_TAG_NAME="cos-common";;
-            cos-kernel) MY_TAG_NAME="cos-kernel";;
-            linux-kernel) MY_TAG_NAME="linux-kernel";;
-            pdk) MY_TAG_NAME="cos-pdk";;
-            androidrt) MY_TAG_NAME="cos-androidrt";;
             temp) MY_TAG_NAME="temp";;
             cpp) MY_LANG="cpp";;
             java) MY_LANG="java";;
             clean) MY_CLEAN="true";;
+            tname=[a-z]*) MY_TAG_NAME="$1";;
         esac
         shift
     done
@@ -31,6 +25,12 @@ check_args()
 }
 
 check_args $*
+
+MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
+if [[ $MY_TAG_NAME"$$$" != "$$$" && $MY_TAG_NAME != "false" ]]; then
+    LOAD_TAG_VIM="set tags+=~/.vim/tags/$MY_TAG_NAME.tag"
+    echo $LOAD_TAG_VIM > loadtag.vim
+fi
 
 if [[ $MY_CLEAN == "true" ]]; then
     rm -f cscope* lookuptags

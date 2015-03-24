@@ -13,17 +13,11 @@ check_args()
     while [ -n "$1" ]
     do
         case "$1" in
-            framework) MY_TAG_NAME="cos-framework";;
-            sdk) MY_TAG_NAME="cos-sdk";;
-            common) MY_TAG_NAME="cos-common";;
-            cos-kernel) MY_TAG_NAME="cos-kernel";;
-            linux-kernel) MY_TAG_NAME="linux-kernel";;
-            pdk) MY_TAG_NAME="cos-pdk";;
-            androidrt) MY_TAG_NAME="cos-androidrt";;
             temp) MY_TAG_NAME="temp";;
             cpp) MY_LANG="cpp";;
             java) MY_LANG="java";;
             clean) MY_CLEAN="true";;
+            tname=[a-z]*) MY_TAG_NAME="$1";;
         esac
         shift
     done
@@ -32,8 +26,14 @@ check_args()
 
 check_args $*
 
+MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
+if [[ $MY_TAG_NAME"$$$" != "$$$" && $MY_TAG_NAME != "false" ]]; then
+    LOAD_TAG_VIM="set tags+=~/.vim/tags/$MY_TAG_NAME.tag"
+    echo $LOAD_TAG_VIM > loadtag.vim
+fi
+
 if [[ $MY_CLEAN == "true" ]]; then
-    rm -f cscope* lookuptags
+    rm -f GTAGS GRTAGS GPATH gtags.files lookuptags
     if [[ -f ~/.vim/tags/$MY_TAG_NAME.tag ]]; then
         rm -f ~/.vim/tags/$MY_TAG_NAME.tag
     fi
@@ -42,13 +42,13 @@ fi
 
 if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
     if [ $MY_LANG = "all" ]; then
-        find ./ -type f -name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.java" | sed 's/^/\"/;s/$/\"/' > cscope.files
+        find ./ -type f -name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.java" | sed 's/^/\"/;s/$/\"/' > gtags.files
     elif [ $MY_LANG = "cpp" ]; then
-        find ./ -type f -name "*.h" -o -name "*.c" -o -name "*.cpp" | sed 's/^/\"/;s/$/\"/' > cscope.files
+        find ./ -type f -name "*.h" -o -name "*.c" -o -name "*.cpp" | sed 's/^/\"/;s/$/\"/' > gtags.files
     else
-        find ./ -type f -name "*.java" | sed 's/^/\"/;s/$/\"/' > cscope.files
+        find ./ -type f -name "*.java" | sed 's/^/\"/;s/$/\"/' > gtags.files
     fi
-    cscope -Rbq
+    gtags
     ctags -R -f ~/.vim/tags/$MY_TAG_NAME.tag --tag-relative=yes --exclude=*.js --exclude=*.png --exclude=*.gif
     # generate tag file for lookupfile plugin
     echo -e "!_TAG_FILE_SORTED\t2\t/2=foldcase/" > lookuptags
