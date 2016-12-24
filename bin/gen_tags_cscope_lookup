@@ -5,8 +5,10 @@ MY_TAG_NAME=false
 MY_LANG=all
 MY_PRUNE_PATH=
 MY_PRUNE_OPT=
+MY_DEF_PRUNE_PATH=.git
 MY_FIND_CMD=
 MY_FIND_FILTER=
+MY_INCLUDE_PATH=
 
 check_args()
 {
@@ -21,8 +23,9 @@ check_args()
             cpp) MY_LANG="cpp";;
             java) MY_LANG="java";;
             clean) MY_CLEAN="true";;
-            tname=[a-z]*) MY_TAG_NAME="$1";;
-            prune=.*) MY_PRUNE_PATH="$1";;
+            tname=[a-zA-Z]*) MY_TAG_NAME="$1";;
+            prune=[a-zA-Z,]*) MY_PRUNE_PATH="$1";;
+            include=[a-zA-Z,]*) MY_INCLUDE_PATH="$1";;
         esac
         shift
     done
@@ -31,42 +34,108 @@ check_args()
 
 check_args $*
 
-if [ "xxx$MY_PRUNE_PATH" != "xxx" ]; then
+if [ "###$MY_PRUNE_PATH" != "###" ]; then
     MY_PRUNE_PATH=`echo $MY_PRUNE_PATH | awk -F "=" '{print $2}'`
-    MY_PRUNE_OPT=`echo $MY_PRUNE_PATH | sed -e 's/,/ -o -path /g'`
-    MY_PRUNE_OPT="\( \( -path $MY_PRUNE_OPT \) -prune \) -o"
+    MY_PRUNE_PATH=$MY_PRUNE_PATH,
 fi
 
-MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
-if [[ $MY_TAG_NAME"$$$" != "$$$" && $MY_TAG_NAME != "false" ]]; then
-    LOAD_TAG_VIM="set tags+=~/.vim/tags/$MY_TAG_NAME.tag"
-    echo $LOAD_TAG_VIM > loadtag.vim
+if [ "###$MY_INCLUDE_PATH" != "###" ]; then
+    MY_INCLUDE_PATH=`echo $MY_INCLUDE_PATH | awk -F "=" '{print $2}'`
+    MY_INCLUDE_PATH=`echo $MY_INCLUDE_PATH | sed -e 's/,/ /g'`
+else
+    MY_INCLUDE_PATH="./"
 fi
+
+MY_PRUNE_PATH=$MY_PRUNE_PATH$MY_DEF_PRUNE_PATH
+
+MY_PRUNE_OPT=`echo $MY_PRUNE_PATH | sed -e 's/,/ -o -path /g'`
+MY_PRUNE_OPT="\( \( -path $MY_PRUNE_OPT \) -prune \) -o"
 
 if [[ $MY_CLEAN == "true" ]]; then
-    rm -f cscope* lookuptags
+    if [ ! -f loadtag.name ]; then
+        echo "Not found tag project"
+        exit 1
+    fi
+    MY_TAG_NAME=`cat loadtag.name`
     if [[ -f ~/.vim/tags/$MY_TAG_NAME.tag ]]; then
         rm -f ~/.vim/tags/$MY_TAG_NAME.tag
     fi
+    rm -f cscope* loadtag.vim lookuptags loadtag.name
     exit 0
+else
+    MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
 fi
 
 if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
     if [ $MY_LANG = "all" ]; then
-        MY_FIND_FILTER='-name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.java"'
+        MY_FIND_FILTER='-name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.java" -o -name "*.s" -o -name "*.S"'
     elif [ $MY_LANG = "cpp" ]; then
-        MY_FIND_FILTER='-name "*.h" -o -name "*.c" -o -name "*.cpp"'
+        MY_FIND_FILTER='-name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.s" -o -name "*.S"'
     else
         MY_FIND_FILTER='-name "*.java"'
     fi
-    MY_FIND_CMD='find ./ '$MY_PRUNE_OPT' \( ! -type l -type f -a \( '$MY_FIND_FILTER' \) -a -print \) | sed "s/^/\"/;s/$/\"/"'
+    MY_FIND_CMD='find '$MY_INCLUDE_PATH' '$MY_PRUNE_OPT' \( ! -type l -type f -a \( '$MY_FIND_FILTER' \) -a -print \)'
     eval $MY_FIND_CMD > cscope.files
     cscope -Rbq
     ctags -R -f ~/.vim/tags/$MY_TAG_NAME.tag --tag-relative=yes --exclude=*.js --exclude=*.png --exclude=*.gif -L cscope.files
     # generate tag file for lookupfile plugin
     echo -e "!_TAG_FILE_SORTED\t2\t/2=foldcase/" > lookuptags
-    find . -not -regex '.*\.\(png\|gif\)' -type f -printf "%f\t%p\t1\n" | \
-        sort -f >> lookuptags
+    #find -L . -not -regex '.*\.\(png\|gif\)' -type f -printf "%f\t%p\t1\n" | \
+    #    sort -f >> lookuptags
+    MY_FIND_CMD='find '$MY_INCLUDE_PATH' '$MY_PRUNE_OPT' \( ! -type l -type f -a \( '$MY_FIND_FILTER' \) -a -printf "%f\t%p\t1\n" \)'
+    eval $MY_FIND_CMD | sort -f >> lookuptags
+
+    echo $MY_TAG_NAME > loadtag.name
+
+    echo "\"Loadtag" > loadtag.vim
+    cat << EOF >> loadtag.vim
+
+set csprg=/usr/bin/cscope
+set nocsverb
+cs add cscope.out
+set csverb
+
+" search cscope file first, NOT tag file
+set csto=0
+" search cscope and tag file
+set cst
+" set cscopequickfix=s-,c-,d-,i-,t-,e-,g-
+" s: 查找C语言符号，即查找函数名、宏、枚举值等出现的地方
+" g: 查找函数、宏、枚举等定义的位置，类似ctags所提供的功能
+" c: 查找调用本函数的函数
+" t: 查找指定的字符串
+" e: 查找egrep模式，相当于egrep功能，但查找速度快多了
+" f: 查找并打开文件，类似vim的find功能
+" i: 查找包含本文件的文件
+" d: 查找本函数调用的函数
+nmap <C-\>s :cscope find s <C-R>=expand("<cword>")<CR><CR>
+nmap <C-\>g :cscope find g <C-R>=expand("<cword>")<CR><CR>
+nmap <C-\>c :cscope find c <C-R>=expand("<cword>")<CR><CR>
+nmap <C-\>t :cscope find t <C-R>=expand("<cword>")<CR><CR>
+nmap <C-\>e :cscope find e <C-R>=expand("<cword>")<CR><CR>
+nmap <C-\>f :cscope find f <C-R>=expand("<cfile>")<CR><CR>
+nmap <C-\>i :cscope find i ^<C-R>=expand("<cfile>")<CR>$<CR>
+nmap <C-\>d :cscope find d <C-R>=expand("<cword>")<CR><CR>
+
+"""""""""""""""""""""""""""""""""""""""
+"                                     "
+"       lookup plugin config          "
+"                                     "
+"""""""""""""""""""""""""""""""""""""""
+" 不保存上次查找的字符串
+let g:LookupFile_PreserveLastPattern = 0
+" 回车打开第一个匹配项目
+let g:LookupFile_AlwaysAcceptFirst = 1
+" 不允许创建不存在的文件
+let g:LookupFile_AllowNewFiles = 0
+nmap <silent> <leader>lb :LUBufs<cr>
+if filereadable("./lookuptags")
+    let g:LookupFile_TagExpr = '"./lookuptags"'
+    nmap <silent> <leader>lf :LUTags<cr>
+    nmap <silent> <leader>lw :LUWalk<cr>
+endif
+EOF
+
 fi
 
 if [ "$MY_FAIL" = "true" ]; then
