@@ -12,6 +12,8 @@ MY_INCLUDE_PATH=
 MY_TAGS_DIR=".vim/tags"
 MY_TAGS_PATH="~/$MY_TAGS_DIR"
 MY_TAGS_ABS_PATH=$HOME/$MY_TAGS_DIR
+MY_UPDATE=flase
+MY_EXPAND_TAB=true
 
 check_args()
 {
@@ -26,9 +28,11 @@ check_args()
             cpp) MY_LANG="cpp";;
             java) MY_LANG="java";;
             clean) MY_CLEAN="true";;
-            tname=[a-zA-Z]*) MY_TAG_NAME="$1";;
+            tname=[a-zA-Z0-9\-_]*) MY_TAG_NAME="$1";;
             prune=[a-zA-Z,]*) MY_PRUNE_PATH="$1";;
             include=[a-zA-Z,]*) MY_INCLUDE_PATH="$1";;
+            update) MY_UPDATE="true";;
+            dis_expand_tab) MY_EXPAND_TAB="false";;
         esac
         shift
     done
@@ -36,6 +40,17 @@ check_args()
 }
 
 check_args $*
+
+if [ $MY_UPDATE == "true" ]; then
+    if [[ ! -f loadtag.vim ]] || [[ ! -f lookuptags ]] || [[ ! -f loadtag.name ]]; then
+        echo "Not found tag project when update"
+        exit 1
+    fi
+    MY_TAG_NAME=`cat loadtag.name`
+    tramp=$MY_TAGS_ABS_PATH/$MY_TAG_NAME
+    gtags -i -f $tramp/gtags.files $tramp
+    exit 0
+fi
 
 if [ "###$MY_PRUNE_PATH" != "###" ]; then
     MY_PRUNE_PATH=`echo $MY_PRUNE_PATH | awk -F "=" '{print $2}'`
@@ -78,8 +93,8 @@ if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
         MY_FIND_FILTER='-name "*.java"'
     fi
     MY_FIND_CMD='find '$MY_INCLUDE_PATH' '$MY_PRUNE_OPT' \( ! -type l -type f -a \( '$MY_FIND_FILTER' \) -a -print \)'
-    tramp=$MY_TAGS_ABS_PATH/$MY_TAG_NAME
 
+    tramp=$MY_TAGS_ABS_PATH/$MY_TAG_NAME
     mkdir -p "$tramp"
     eval $MY_FIND_CMD > $tramp/gtags.files
     gtags -f $tramp/gtags.files $tramp
@@ -94,6 +109,9 @@ if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
     echo $MY_TAG_NAME > loadtag.name
 
     echo "\"Loadtag" > loadtag.vim
+    if [[ $MY_EXPAND_TAB = "false" ]]; then
+        echo "set noexpandtab" >> loadtag.vim
+    fi
     cat << EOF >> loadtag.vim
 function! UpdateGtags(f)
   let dir = fnamemodify(a:f, ':p:h')
