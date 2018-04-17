@@ -42,7 +42,7 @@ check_args()
 check_args $*
 
 if [ $MY_UPDATE == "true" ]; then
-    if [[ ! -f loadtag.vim ]] || [[ ! -f lookuptags ]] || [[ ! -f loadtag.name ]]; then
+    if [[ ! -f loadtag.vim ]] || [[ ! -f loadtag.name ]]; then
         echo "Not found tag project when update"
         exit 1
     fi
@@ -78,7 +78,7 @@ if [[ $MY_CLEAN == "true" ]]; then
     if [ -d $MY_TAGS_ABS_PATH/$MY_TAG_NAME ]; then
         rm -rf $MY_TAGS_ABS_PATH/$MY_TAG_NAME
     fi
-    rm -f loadtag.vim lookuptags loadtag.name
+    rm -f loadtag.vim loadtag.name
     exit 0
 else
     MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
@@ -98,13 +98,6 @@ if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
     mkdir -p "$tramp"
     eval $MY_FIND_CMD > $tramp/gtags.files
     gtags -f $tramp/gtags.files $tramp
-
-    # generate tag file for lookupfile plugin
-    echo -e "!_TAG_FILE_SORTED\t2\t/2=foldcase/" > lookuptags
-    #find -L . -not -regex '.*\.\(png\|gif\)' -type f -printf "%f\t%p\t1\n" | \
-    #    sort -f >> lookuptags
-    MY_FIND_CMD='find '$MY_INCLUDE_PATH' '$MY_PRUNE_OPT' \( ! -type l -type f -a \( '$MY_FIND_FILTER' \) -a -printf "%f\t%p\t1\n" \)'
-    eval $MY_FIND_CMD | sort -f >> lookuptags
 
     echo $MY_TAG_NAME > loadtag.name
 
@@ -150,24 +143,6 @@ nmap <C-\>e :cscope find e <C-R>=expand("<cword>")<CR><CR>
 nmap <C-\>f :cscope find f <C-R>=expand("<cfile>")<CR><CR>
 nmap <C-\>i :cscope find i ^<C-R>=expand("<cfile>")<CR>$<CR>
 nmap <C-\>d :cscope find d <C-R>=expand("<cword>")<CR><CR>
-
-"""""""""""""""""""""""""""""""""""""""
-"                                     "
-"       lookup plugin config          "
-"                                     "
-"""""""""""""""""""""""""""""""""""""""
-" 不保存上次查找的字符串
-let g:LookupFile_PreserveLastPattern = 0
-" 回车打开第一个匹配项目
-let g:LookupFile_AlwaysAcceptFirst = 1
-" 不允许创建不存在的文件
-let g:LookupFile_AllowNewFiles = 0
-nmap <silent> <leader>lb :LUBufs<cr>
-if filereadable("./lookuptags")
-    let g:LookupFile_TagExpr = '"./lookuptags"'
-    nmap <silent> <leader>lf :LUTags<cr>
-    nmap <silent> <leader>lw :LUWalk<cr>
-endif
 EOF
 
 fi
