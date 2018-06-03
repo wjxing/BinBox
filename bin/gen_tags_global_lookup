@@ -114,6 +114,7 @@ endfunction
 let \$GTAGSROOT="$PWD"
 let \$GTAGSDBPATH="$tramp"
 
+set noautochdir
 set csprg=$HOME/bin/global/bin/gtags-cscope
 set nocsverb
 cs add $tramp/GTAGS
