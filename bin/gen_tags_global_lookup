@@ -42,7 +42,7 @@ check_args()
 check_args $*
 
 if [ $MY_UPDATE == "true" ]; then
-    if [[ ! -f loadtag.vim ]] || [[ ! -f loadtag.name ]]; then
+    if [[ ! -f loadtag.name ]]; then
         echo "Not found tag project when update"
         exit 1
     fi
@@ -78,11 +78,14 @@ if [[ $MY_CLEAN == "true" ]]; then
     if [ -d $MY_TAGS_ABS_PATH/$MY_TAG_NAME ]; then
         rm -rf $MY_TAGS_ABS_PATH/$MY_TAG_NAME
     fi
-    rm -rf loadtag.vim loadtag.name ctrlp_cache
+    rm -rf loadtag.name
     exit 0
 else
     MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
 fi
+
+MY_VIM_PATH=$MY_TAGS_ABS_PATH/$MY_TAG_NAME/loadtag.vim
+MY_CTRLP_PATH=$MY_TAGS_ABS_PATH/$MY_TAG_NAME/ctrlp_cache
 
 if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
     if [ $MY_LANG = "all" ]; then
@@ -101,11 +104,11 @@ if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
 
     echo $MY_TAG_NAME > loadtag.name
 
-    echo "\"Loadtag" > loadtag.vim
+    echo "\"Loadtag" > $MY_VIM_PATH
     if [[ $MY_EXPAND_TAB = "false" ]]; then
-        echo "set noexpandtab" >> loadtag.vim
+        echo "set noexpandtab" >> $MY_VIM_PATH
     fi
-    cat << EOF >> loadtag.vim
+    cat << EOF >> $MY_VIM_PATH
 function! UpdateGtags(f)
   let dir = fnamemodify(a:f, ':p:h')
   exe 'silent !gtags -f $tramp/gtags.files --single-update ' . a:f . ' $tramp &'
@@ -146,7 +149,7 @@ nmap <C-\>i :cscope find i ^<C-R>=expand("<cfile>")<CR>$<CR>
 nmap <C-\>d :cscope find d <C-R>=expand("<cword>")<CR><CR>
 
 let g:ctrlp_working_path_mode = 'c'
-let g:ctrlp_cache_dir = \$PWD.'/ctrlp_cache'
+let g:ctrlp_cache_dir = "$MY_CTRLP_PATH"
 EOF
 
 fi
