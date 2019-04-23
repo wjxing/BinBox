@@ -148,7 +148,8 @@ nmap <C-\>f :cscope find f <C-R>=expand("<cfile>")<CR><CR>
 nmap <C-\>i :cscope find i ^<C-R>=expand("<cfile>")<CR>$<CR>
 nmap <C-\>d :cscope find d <C-R>=expand("<cword>")<CR><CR>
 
-let g:ctrlp_working_path_mode = 'c'
+" let g:ctrlp_working_path_mode = 'c'
+let g:ctrlp_working_path_mode = 0
 let g:ctrlp_cache_dir = "$MY_CTRLP_PATH"
 EOF
 
