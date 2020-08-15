@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+
+import re
+import sys
+
+class LineFormat:
+    def __init__(self):
+        self.Line = ""
+        self.LineNr = 0
+        self.LineLevel = 0
+        self.LastSon = 0
+
+    def __str__(self):
+        return """LineFormat:{line}
+ LineNr = {ln}
+ LineLevel = {ll}
+ LastSon = {ls}""".format(line=self.Line, ln=self.LineNr, ll=self.LineLevel, ls=self.LastSon)
+
+def usage():
+    print(("""Usage:
+$ {prog} functions_call_file
+
+The content of functions_call_file is like:
+
+perf_event_task_sched_in
+    __perf_event_task_sched_in
+        perf_event_context_sched_in
+            perf_pmu_disable
+            cpu_ctx_sched_out
+                ctx_sched_out
+            perf_event_sched_in
+
+The indent is 4 space based. Which would print:
+
+perf_event_task_sched_in
+└── __perf_event_task_sched_in
+    └── perf_event_context_sched_in
+        ├── perf_pmu_disable
+        ├── cpu_ctx_sched_out
+        │   └── ctx_sched_out
+        └── perf_event_sched_in
+""").format(prog=sys.argv[0]))
+
+if len(sys.argv) != 2 or sys.argv[1] == "--help" or sys.argv[1] == "-h":
+    usage()
+    exit(1)
+
+DUMP_OBJ = False
+
+def parse_line_format(line_formats, line):
+    match = re.match(r"^( *)", line)
+    lf = LineFormat()
+    lf.Line = line
+    line_level = len(match.group(0))
+    son_line = len(line_formats)
+    lf.LineNr = son_line
+    lf.LineLevel = line_level
+    lf.LastSon = son_line
+    if line_level == 0:
+        line_formats.append(lf)
+        return
+    if line_level % 4 != 0:
+        line_level = (line_level + 3) & (~3)
+        lf.Line = " " * (line_level - lf.LineLevel) + lf.Line
+        lf.LineLevel = line_level
+    father_level = lf.LineLevel - 4
+    for i in line_formats[::-1]:
+        if i.LineLevel == father_level:
+            i.LastSon = son_line
+            break
+    line_formats.append(lf)
+
+def replace_txt(line_formats):
+    son_slash = "├──"
+    bridge_son_slash = "│"
+    last_son_slash = "└──"
+    for lf in line_formats:
+        s = lf.LineNr
+        e = lf.LastSon
+        if s == e:
+            continue
+        r1pos = lf.LineLevel
+        for slf in line_formats[s + 1 : e]:
+            line = list(slf.Line)
+            #line = line.replace(line[r1pos], son_slash)
+            if lf.LineLevel + 4 == slf.LineLevel:
+                line[r1pos] = son_slash[0]
+                line[r1pos + 1] = son_slash[1]
+                line[r1pos + 2] = son_slash[2]
+            else:
+                line[r1pos] = bridge_son_slash
+            slf.Line = "".join(line)
+        line = list(line_formats[e].Line)
+        #line = line.replace(line[r1pos : r1pos + 3], last_son_slash)
+        line[r1pos] = last_son_slash[0]
+        line[r1pos + 1] = last_son_slash[1]
+        line[r1pos + 2] = last_son_slash[2]
+        line_formats[e].Line = "".join(line)
+
+def parse_txt(file_path):
+    line_formats = []
+    with open(file_path, "r") as f:
+        for line in f:
+            parse_line_format(line_formats, line)
+
+    if DUMP_OBJ:
+        for l in line_formats:
+            print(l)
+
+    replace_txt(line_formats)
+
+    if not DUMP_OBJ:
+        for lf in line_formats:
+            print(lf.Line.rstrip())
+
+if __name__ == '__main__':
+    parse_txt(sys.argv[1])
