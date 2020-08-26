@@ -44,11 +44,16 @@ perf_event_task_sched_in
         └── perf_event_sched_in
 """).format(prog=sys.argv[0]))
 
-if len(sys.argv) == 2 and (sys.argv[1] == "--help" or sys.argv[1] == "-h"):
-    usage()
-    exit(0)
-
 DUMP_OBJ = False
+
+def parse_argv():
+    if len(sys.argv) == 2 and (sys.argv[1] == "--help" or sys.argv[1] == "-h"):
+        usage()
+        exit(0)
+    # This could delete param in sys.argv for fileinput process later
+    for idx in range(len(sys.argv) - 1, -1, -1):
+        if sys.argv[idx] == "xxx":
+            del sys.argv[idx]
 
 def parse_line_format(line_formats, line):
     match = re.match(r"^( *)", line)
@@ -121,4 +126,5 @@ def parse_txt():
             print(lf.Line.rstrip())
 
 if __name__ == '__main__':
+    parse_argv()
     parse_txt()
