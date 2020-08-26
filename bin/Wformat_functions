@@ -2,6 +2,7 @@
 
 import re
 import sys
+import fileinput
 
 class LineFormat:
     def __init__(self):
@@ -19,8 +20,10 @@ class LineFormat:
 def usage():
     print(("""Usage:
 $ {prog} functions_call_file
+$ cat functions_call_file | {prog}
+$ echo functions_call_content | {prog}
 
-The content of functions_call_file is like:
+The content of functions_call_file/functions_call_content is like:
 
 perf_event_task_sched_in
     __perf_event_task_sched_in
@@ -41,9 +44,9 @@ perf_event_task_sched_in
         └── perf_event_sched_in
 """).format(prog=sys.argv[0]))
 
-if len(sys.argv) != 2 or sys.argv[1] == "--help" or sys.argv[1] == "-h":
+if len(sys.argv) == 2 and (sys.argv[1] == "--help" or sys.argv[1] == "-h"):
     usage()
-    exit(1)
+    exit(0)
 
 DUMP_OBJ = False
 
@@ -97,11 +100,15 @@ def replace_txt(line_formats):
         line[r1pos + 2] = last_son_slash[2]
         line_formats[e].Line = "".join(line)
 
-def parse_txt(file_path):
+def parse_txt():
     line_formats = []
-    with open(file_path, "r") as f:
-        for line in f:
-            parse_line_format(line_formats, line)
+    try:
+        with fileinput.input() as f_in:
+            for line in f_in:
+                parse_line_format(line_formats, line)
+    except FileNotFoundError:
+        usage()
+        exit(1)
 
     if DUMP_OBJ:
         for l in line_formats:
@@ -114,4 +121,4 @@ def parse_txt(file_path):
             print(lf.Line.rstrip())
 
 if __name__ == '__main__':
-    parse_txt(sys.argv[1])
+    parse_txt()
