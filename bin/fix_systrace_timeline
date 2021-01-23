@@ -1,0 +1,60 @@
+#!/usr/bin/env perl
+
+# https://github.com/gatieme/systrace/blob/master/scripts/fix_time.pl
+use warnings;
+
+my $file_name = $ARGV[0] // "systrace.html";
+open FH, $file_name;
+
+my $output_name = $ARGV[1] // "mytrace.js";
+open OUT, ">$output_name";
+
+my ($time, $start);
+
+while (<FH>) {
+	if (1) {
+		my $mark;
+		($mark) = /(^#)/;
+		if ($mark) {
+			print OUT "$_";
+			$_ = <FH>;
+			redo;
+		}
+		($start) = /(\d+\.\d+): /;
+		unless ($start) {
+			# try one more line
+			$_ = <FH>;
+			($start) = /(\d+\.\d+): /;
+			$start = sprintf("%.06f", $start);
+		}
+
+		die "not get start timestamp" unless $start;
+
+		s/\d+\.\d+: /0.000000: /;
+		print OUT $_;
+		#print "start is $start\n";
+		#print OUT "start is $start\n";
+		last;
+	}
+}
+
+while (<FH>) {
+	if (1) {
+		($time) = /(\d+\.\d+): /;
+		next unless time;
+		$time = sprintf("%.06f", $time);
+		$time = sprintf("%.06f", $time - $start);
+		#$time = sprintf("%.06f", $time * 1000);
+
+		#my $time_ms_part = $time;
+		#my $time_us_part = $time;
+		#$time_ms_part = int($time);
+		#$time_us_part = int(($time_us_part - $time_ms_part) * 1000);
+
+		#print "$time_ms_part, $time_us_part\n";
+		#s/\d+\.\d+: /$time_ms_part ms($time_us_part us): /;
+		s/\d+\.\d+: /$time: /;
+
+		print OUT $_
+	}
+}
