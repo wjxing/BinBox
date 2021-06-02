@@ -26,7 +26,6 @@ check_args()
     while [ -n "$1" ]
     do
         case "$1" in
-            temp) MY_TAG_NAME="temp";;
             cpp) MY_LANG="cpp";;
             java) MY_LANG="java";;
             tname=[a-zA-Z0-9\-_]*) MY_TAG_NAME="$1";;
