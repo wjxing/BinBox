@@ -1,5 +1,4 @@
 #!/bin/bash
-MY_CLEAN=false
 MY_FAIL=false
 MY_TAG_NAME=false
 MY_LANG=all
@@ -9,12 +8,14 @@ MY_DEF_PRUNE_PATH=.git
 MY_FIND_CMD=
 MY_FIND_FILTER=
 MY_INCLUDE_PATH=
+MY_ADD_PATH=
 MY_TAGS_DIR=".vim/tags"
-MY_TAGS_PATH="~/$MY_TAGS_DIR"
 MY_TAGS_ABS_PATH=$HOME/$MY_TAGS_DIR
-MY_UPDATE=flase
+MY_UPDATE=false
 MY_EXPAND_TAB=true
 MY_GTAGS=gtags
+MY_TAGS_LIST_FILE=$MY_TAGS_ABS_PATH/tags_list
+MY_CUR_PATH=$PWD
 
 check_args()
 {
@@ -28,16 +29,17 @@ check_args()
             temp) MY_TAG_NAME="temp";;
             cpp) MY_LANG="cpp";;
             java) MY_LANG="java";;
-            clean) MY_CLEAN="true";;
             tname=[a-zA-Z0-9\-_]*) MY_TAG_NAME="$1";;
-            prune=[a-zA-Z,]*) MY_PRUNE_PATH="$1";;
-            include=[a-zA-Z,]*) MY_INCLUDE_PATH="$1";;
+            prune=[a-zA-Z\-_,]*) MY_PRUNE_PATH="$1";;
+            include=[a-zA-Z\-_,]*) MY_INCLUDE_PATH="$1";;
+            add=[a-zA-Z\-_,]*) MY_ADD_PATH="$1";;
             update) MY_UPDATE="true";;
             dis_expand_tab) MY_EXPAND_TAB="false";;
         esac
         shift
     done
 
+    MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
 }
 
 check_bins()
@@ -57,20 +59,58 @@ check_bins()
     fi
 }
 
+insert_tags_list()
+{
+    if [ "xxx$MY_TAG_NAME" == "xxx" ]; then
+        echo "Need tag name"
+        exit 1
+    fi
+    local tag_list=$MY_TAG_NAME:$MY_CUR_PATH
+    mkdir -p $(dirname $MY_TAGS_LIST_FILE)
+    echo $tag_list >> $MY_TAGS_LIST_FILE
+    sort -n $MY_TAGS_LIST_FILE | uniq > $MY_TAGS_LIST_FILE.tmp
+    mv $MY_TAGS_LIST_FILE.tmp $MY_TAGS_LIST_FILE
+}
+
+do_update()
+{
+    local tag_name=
+    local tag_path=
+    local tag_find=false
+    while read line
+    do
+        if [ "xxx$line" == "xxx" ]; then
+            continue
+        fi
+        tag_name=`echo $line | awk -F ":" '{print $1}'`
+        tag_path=`echo $line | awk -F ":" '{print $2}'`
+        if [ "$tag_path" != "$MY_CUR_PATH" ]; then
+            continue
+        fi
+        if [[ "xxx$MY_TAG_NAME" != "xxx" && "$MY_TAG_NAME" != "$tag_name" ]]; then
+            continue
+        fi
+        tag_find=true
+        break
+    done<$MY_TAGS_LIST_FILE
+    if [ "$tag_find" != "true" ]; then
+        echo "Not find update tag"
+        exit 1
+    fi
+    tramp=$MY_TAGS_ABS_PATH/$tag_name
+    $MY_GTAGS -i -f $tramp/gtags.files $tramp
+    exit 0
+}
+
 check_args $*
 
 check_bins
 
-if [ $MY_UPDATE == "true" ]; then
-    if [[ ! -f loadtag.name ]]; then
-        echo "Not found tag project when update"
-        exit 1
-    fi
-    MY_TAG_NAME=`cat loadtag.name`
-    tramp=$MY_TAGS_ABS_PATH/$MY_TAG_NAME
-    $MY_GTAGS -i -f $tramp/gtags.files $tramp
-    exit 0
+if [[ $MY_UPDATE == "true" || "xxx$MY_ADD_PATH" != "xxx" ]]; then
+    do_update
 fi
+
+insert_tags_list
 
 if [ "###$MY_PRUNE_PATH" != "###" ]; then
     MY_PRUNE_PATH=`echo $MY_PRUNE_PATH | awk -F "=" '{print $2}'`
@@ -89,21 +129,6 @@ MY_PRUNE_PATH=$MY_PRUNE_PATH$MY_DEF_PRUNE_PATH
 MY_PRUNE_OPT=`echo $MY_PRUNE_PATH | sed -e 's/,/ -o -path /g'`
 MY_PRUNE_OPT="\( \( -path $MY_PRUNE_OPT \) -prune \) -o"
 
-if [[ $MY_CLEAN == "true" ]]; then
-    if [ ! -f loadtag.name ]; then
-        echo "Not found tag project"
-        exit 1
-    fi
-    MY_TAG_NAME=`cat loadtag.name`
-    if [ -d $MY_TAGS_ABS_PATH/$MY_TAG_NAME ]; then
-        rm -rf $MY_TAGS_ABS_PATH/$MY_TAG_NAME
-    fi
-    rm -rf loadtag.name
-    exit 0
-else
-    MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
-fi
-
 MY_VIM_PATH=$MY_TAGS_ABS_PATH/$MY_TAG_NAME/loadtag.vim
 MY_CTRLP_PATH=$MY_TAGS_ABS_PATH/$MY_TAG_NAME/ctrlp_cache
 
@@ -121,8 +146,6 @@ if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
     mkdir -p "$tramp"
     eval $MY_FIND_CMD > $tramp/gtags.files
     $MY_GTAGS -f $tramp/gtags.files $tramp
-
-    echo $MY_TAG_NAME > loadtag.name
 
     echo "\"Loadtag" > $MY_VIM_PATH
     if [[ $MY_EXPAND_TAB = "false" ]]; then
