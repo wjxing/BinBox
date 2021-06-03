@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+global_bin=`which global`
+if [ $? -ne 0 ]; then
+    echo "Not install global"
+    exit 1
+fi
+
+tags_list_file=$HOME/.vim/tags/tags_list
+tags_root=$HOME/.vim/tags
+cur_path=$PWD
+cur_path_len=${#cur_path}
+
+while read line
+do
+    if [ "xxx$line" == "xxx" ]; then
+        continue
+    fi
+    tag_name=`echo $line | awk -F ":" '{print $1}'`
+    tag_path=`echo $line | awk -F ":" '{print $2}'`
+    if [[ "xxx$tag_name" == "xxx" || "xxx$tag_path" == "xxx" ]]; then
+        continue
+    fi
+    tag_path_len=${#tag_path}
+    if [ $cur_path_len -lt $tag_path_len ]; then
+        continue
+    fi
+    cur_path_pre=${cur_path:0:$tag_path_len}
+    if [ "$cur_path_pre" == "$tag_path" ]; then
+        GTAGSROOT=$tag_path GTAGSDBPATH=$tags_root/$tag_name global --color -ax $*
+    fi
+
+done<$tags_list_file
+
