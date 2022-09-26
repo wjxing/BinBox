@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+# Generate file list for Source Insight to add files from dep files.
+
+if [ $# != 2 ]; then
+    echo "Need source_root_path dep_root_path"
+    exit 1
+fi
+
+source_root_path=$1
+dep_root_path=$2
+
+if [ ! -d $source_root_path ]; then
+    echo "$source_root_path not exist"
+    exit 1
+fi
+
+if [ ! -d $dep_root_path ]; then
+    echo "$dep_root_path not exist"
+    exit 1
+fi
+
+function parse_dep_file() {
+    echo "Processing $1..."
+    raw_dep_filelist=$(awk '{ p = 1 } /[^\\]$/{ print;exit } p' $1 2>/dev/null)
+    raw_dep_filelist=$(echo $raw_dep_filelist | sed -e 's/^.*: //' -e 's/\\//g')
+    raw_dep_filelist=$(echo $raw_dep_filelist | perl -pe 's#^(?!/)#'$2'/#')
+    raw_dep_filelist=$(echo $raw_dep_filelist | perl -pe 's# (?!/)# '$2'/#g')
+    echo $raw_dep_filelist | tr ' ' '\n' >> raw_dep_filelist
+}
+
+source_root_path_abs=$(readlink -f "$source_root_path")
+dep_root_path_abs=$(readlink -f "$dep_root_path")
+
+dep_files=$(find "$dep_root_path_abs" -name "*.d")
+
+rm -rf raw_dep_filelist dep_filelist.sort
+
+for dep_f in $dep_files
+do
+    parse_dep_file "$dep_f" "$source_root_path_abs"
+done
+
+sort -u raw_dep_filelist > dep_filelist.sort
+
+rm -rf raw_dep_filelist
+
