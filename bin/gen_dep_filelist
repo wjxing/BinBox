@@ -45,3 +45,5 @@ sort -u raw_dep_filelist > dep_filelist.sort
 
 rm -rf raw_dep_filelist
 
+# sed -i -e 's#/#\\#g' -e 's/\\root/Z:/' dep_filelist.sort
+
