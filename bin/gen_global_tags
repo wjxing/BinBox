@@ -169,7 +169,7 @@ set nocsverb
 cs add $tramp/GTAGS
 set csverb
 au BufWritePost *.java call UpdateGtags(expand('<afile>'))
-au BufWritePost *.[ch] call UpdateGtags(expand('<afile>'))
+au BufWritePost *.[chv] call UpdateGtags(expand('<afile>'))
 au BufWritePost *.cpp call UpdateGtags(expand('<afile>'))
 
 " search cscope file first, NOT tag file
