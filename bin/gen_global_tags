@@ -9,6 +9,7 @@ MY_FIND_CMD=
 MY_FIND_FILTER=
 MY_INCLUDE_PATH=
 MY_ADD_PATH=
+MY_LIST=
 MY_TAGS_DIR=".vim/tags"
 MY_TAGS_ABS_PATH=$HOME/$MY_TAGS_DIR
 MY_UPDATE=false
@@ -33,6 +34,7 @@ check_args()
             prune=[a-zA-Z\-_,]*) MY_PRUNE_PATH="$1";;
             include=[a-zA-Z\-_,]*) MY_INCLUDE_PATH="$1";;
             add=[a-zA-Z\-_,]*) MY_ADD_PATH="$1";;
+            list=*) MY_LIST="$1";;
             update) MY_UPDATE="true";;
             dis_expand_tab) MY_EXPAND_TAB="false";;
         esac
@@ -40,6 +42,11 @@ check_args()
     done
 
     MY_TAG_NAME=`echo $MY_TAG_NAME | awk -F "=" '{print $2}'`
+    MY_LIST=`echo $MY_LIST | awk -F "=" '{print $2}'`
+    if [ ! -f $MY_LIST ]; then
+        echo "Not exist $MY_LIST"
+        exit 1
+    fi
 }
 
 check_bins()
@@ -133,20 +140,24 @@ MY_VIM_PATH=$MY_TAGS_ABS_PATH/$MY_TAG_NAME/loadtag.vim
 MY_CTRLP_PATH=$MY_TAGS_ABS_PATH/$MY_TAG_NAME/ctrlp_cache
 
 if [[ $MY_FAIL != "true" && $MY_TAG_NAME != "false" ]]; then
-    if [ $MY_LANG = "all" ]; then
-        MY_FIND_FILTER='-name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.java" -o -name "*.s" -o -name "*.S"'
-    elif [ $MY_LANG = "cpp" ]; then
-        MY_FIND_FILTER='-name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.s" -o -name "*.S"'
-    elif [ $MY_LANG = "verilog" ]; then
-        MY_FIND_FILTER='-name "*.v"'
-    else
-        MY_FIND_FILTER='-name "*.java"'
-    fi
-    MY_FIND_CMD='find '$MY_INCLUDE_PATH' '$MY_PRUNE_OPT' \( ! -type l -type f -a \( '$MY_FIND_FILTER' \) -a -print \)'
-
     tramp=$MY_TAGS_ABS_PATH/$MY_TAG_NAME
     mkdir -p "$tramp"
-    eval $MY_FIND_CMD > $tramp/gtags.files
+    if [ "###$MY_LIST" != "###" ]; then
+        cp $MY_LIST $tramp/gtags.files
+    else
+        if [ $MY_LANG = "all" ]; then
+            MY_FIND_FILTER='-name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.java" -o -name "*.s" -o -name "*.S"'
+        elif [ $MY_LANG = "cpp" ]; then
+            MY_FIND_FILTER='-name "*.h" -o -name "*.c" -o -name "*.cpp" -o -name "*.s" -o -name "*.S"'
+        elif [ $MY_LANG = "verilog" ]; then
+            MY_FIND_FILTER='-name "*.v"'
+        else
+            MY_FIND_FILTER='-name "*.java"'
+        fi
+        MY_FIND_CMD='find '$MY_INCLUDE_PATH' '$MY_PRUNE_OPT' \( ! -type l -type f -a \( '$MY_FIND_FILTER' \) -a -print \)'
+
+        eval $MY_FIND_CMD > $tramp/gtags.files
+    fi
     # Need pip install pygments
     $MY_GTAGS -f $tramp/gtags.files --gtagslabel=pygments $tramp
 
